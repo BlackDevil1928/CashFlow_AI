@@ -2,6 +2,17 @@
 
 A smart expense management system that helps users track, analyze, and forecast their spending, while offering AI-driven insights and financial recommendations using the **Gemini 2.5 Flash API**.
 
+=======
+# 🧩 ExpenseMuse AI – Intelligent Expense & Budget Assistant
+
+A smart expense management system that helps users track, analyze, and forecast their spending, while offering AI-driven insights and financial recommendations using the **Gemini 2.5 Flash API**.
+
+🔗 Live Links
+
+- 🌐 Live Demo: [ExpenseMuse AI](https://expensemuseai.vercel.app/)
+- 📞 Call the AI Assistant: Adding very soon😊
+
+
 ## 🎯 Features
 
 ### Core Features
@@ -32,10 +43,17 @@ Follow these steps:
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
+
 git clone <YOUR_GIT_URL>
 
 # Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
+=======
+git clone <GIT_URL>
+
+# Step 2: Navigate to the project directory.
+cd <PROJECT_NAME>
+
 
 # Step 3: Install the necessary dependencies.
 npm i
