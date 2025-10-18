@@ -1,4 +1,4 @@
-import { Moon, Sun, LogOut, Wallet, LayoutDashboard, BarChart3, Target, Settings as SettingsIcon, PiggyBank, TrendingUp, Receipt, Brain, DollarSign, Sparkles, Menu, X, ScanLine, ChevronDown, Layers } from "lucide-react";
+import { Moon, Sun, LogOut, Wallet, LayoutDashboard, BarChart3, Target, Settings as SettingsIcon, PiggyBank, TrendingUp, Receipt, IndianRupee, DollarSign, Sparkles, Menu, X, ScanLine, ChevronDown, Layers, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,7 +39,8 @@ export const Navbar = () => {
     { path: "/wallets", label: "Wallets", icon: Wallet, description: "Manage accounts" },
     { path: "/income", label: "Income", icon: TrendingUp, description: "Track earnings" },
     { path: "/bill-scanner", label: "Bill Scanner", icon: ScanLine, description: "Scan & upload bills" },
-    { path: "/financial-guidance", label: "Financial Guidance", icon: Brain, description: "AI learning & tips" },
+    { path: "/financial-guidance", label: "Financial Guidance", icon: IndianRupee, description: "AI learning & tips" },
+    { path: "/redemption", label: "Rewards Center", icon: Trophy, description: "Redeem points & vouchers" },
     { path: "/settings", label: "Settings", icon: SettingsIcon, description: "App preferences" },
   ];
 
@@ -114,7 +115,7 @@ export const Navbar = () => {
                       ease: "linear"
                     }}
                   >
-                    <Brain className="h-6 w-6 text-white" />
+                    <IndianRupee className="h-6 w-6 text-white" />
                   </motion.div>
                 </motion.div>
                 

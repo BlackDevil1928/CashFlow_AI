@@ -20,6 +20,7 @@ import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import BillScanner from "./pages/BillScanner";
 import FinancialGuidance from "./pages/FinancialGuidance";
+import Redemption from "./pages/Redemption";
 import ExpandableTabsDemo from "./pages/ExpandableTabsDemo";
 import NotFound from "./pages/NotFound";
 
@@ -46,14 +47,19 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  // Initialize ML engine on app startup
+  // Initialize ML engine in background (non-blocking)
   useEffect(() => {
-    console.log('🤖 Initializing CashFlow AI...');
-    mlEngine.initialize().then(() => {
-      console.log('✅ AI Engine initialized successfully');
-    }).catch((err) => {
-      console.log('ℹ️  AI Engine will train when sufficient data is available');
-    });
+    // Defer initialization to not block initial render
+    const timer = setTimeout(() => {
+      console.log('🤖 Initializing CashFlow AI...');
+      mlEngine.initialize().then(() => {
+        console.log('✅ AI Engine initialized successfully');
+      }).catch((err) => {
+        console.log('ℹ️  AI Engine will train when sufficient data is available');
+      });
+    }, 100); // Defer by 100ms to allow UI to render first
+    
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -76,6 +82,7 @@ const App = () => {
             <Route path="/bills" element={<Bills />} />
             <Route path="/bill-scanner" element={<BillScanner />} />
             <Route path="/financial-guidance" element={<FinancialGuidance />} />
+            <Route path="/redemption" element={<Redemption />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/expandable-tabs-demo" element={<ExpandableTabsDemo />} />
             <Route path="/auth" element={<Auth />} />

@@ -6,34 +6,27 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Sparkles, TrendingUp, Target, Shield, Zap, BarChart3, 
-  PiggyBank, Trophy, CheckCircle, Star, ArrowRight, Wallet, Brain,
-  Lightbulb, Sparkle, CircuitBoard, Bot, Cpu
+  PiggyBank, Trophy, CheckCircle, Star, ArrowRight, Wallet, IndianRupee,
+  Lightbulb, Sparkle, CircuitBoard, Bot, Cpu, DollarSign
 } from "lucide-react";
 import Orb from "@/components/Orb";
 import { Boxes } from "@/components/ui/background-boxes";
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already authenticated
+    // Check if user is already authenticated (non-blocking)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/dashboard");
-      } else {
-        setLoading(false);
       }
     });
   }, [navigate]);
 
-  if (loading) {
-    return null; // or a loading spinner
-  }
-
   const features = [
     {
-      icon: Brain,
+      icon: DollarSign,
       title: "Neural Expense Analysis",
       description: "Advanced AI algorithms analyze your spending patterns and predict future expenses with unprecedented accuracy",
       color: "text-purple-400",
@@ -119,7 +112,7 @@ export default function Landing() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-primary blur-lg opacity-60"></div>
               <div className="relative bg-gradient-primary p-2 rounded-lg">
-                <Brain className="h-6 w-6 text-white" />
+                <IndianRupee className="h-6 w-6 text-white" />
               </div>
             </div>
             <div>
@@ -133,10 +126,31 @@ export default function Landing() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="text-slate-300 hover:text-white" onClick={() => navigate("/auth")}>
+            <Button 
+              variant="ghost" 
+              className="text-slate-300 hover:text-white" 
+              onClick={() => navigate("/auth")}
+              onMouseEnter={() => {
+                // Preload auth route on hover
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = '/auth';
+                document.head.appendChild(link);
+              }}
+            >
               Sign In
             </Button>
-            <Button className="bg-gradient-primary hover:opacity-90 shadow-lg shadow-purple-500/50" onClick={() => navigate("/auth")}>
+            <Button 
+              className="bg-gradient-primary hover:opacity-90 shadow-lg shadow-purple-500/50" 
+              onClick={() => navigate("/auth")}
+              onMouseEnter={() => {
+                // Preload auth route on hover
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = '/auth';
+                document.head.appendChild(link);
+              }}
+            >
               <Sparkle className="mr-2 h-4 w-4" />
               Launch AI
             </Button>
@@ -159,7 +173,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
           <div className="max-w-5xl mx-auto text-center space-y-8 animate-fade-in">
             <Badge className="bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-purple-300 border border-purple-500/30 backdrop-blur-sm px-4 py-1.5">
-              <Brain className="h-3 w-3 mr-2 inline-block" />
+              <DollarSign className="h-3 w-3 mr-2 inline-block" />
               Next-Gen AI Financial Intelligence
             </Badge>
             
@@ -419,7 +433,7 @@ export default function Landing() {
                     className="w-full bg-gradient-primary hover:opacity-90 text-lg py-7 rounded-xl shadow-2xl shadow-purple-500/50"
                     onClick={() => navigate("/auth")}
                   >
-                    <Brain className="mr-2 h-5 w-5" />
+                    <DollarSign className="mr-2 h-5 w-5" />
                     Activate Your AI Now
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
@@ -434,7 +448,7 @@ export default function Landing() {
                       <span>Instant Setup</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Brain className="h-3 w-3" />
+                      <IndianRupee className="h-3 w-3" />
                       <span>24/7 AI Support</span>
                     </div>
                   </div>
@@ -459,7 +473,7 @@ export default function Landing() {
             <div className="relative bg-gradient-to-br from-purple-900/50 via-slate-900/50 to-cyan-900/50 backdrop-blur-xl border border-purple-500/30 rounded-3xl p-12 md:p-16 text-center">
               <div className="mb-6">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-primary/20 border border-purple-500/30 text-purple-300 text-sm mb-6">
-                  <Brain className="h-4 w-4" />
+                  <DollarSign className="h-4 w-4" />
                   <span className="font-mono">AI.READY.NOW</span>
                 </div>
               </div>
@@ -523,7 +537,7 @@ export default function Landing() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-primary blur-lg opacity-60"></div>
                 <div className="relative bg-gradient-primary p-2 rounded-lg">
-                  <Brain className="h-5 w-5 text-white" />
+                  <IndianRupee className="h-5 w-5 text-white" />
                 </div>
               </div>
               <div>

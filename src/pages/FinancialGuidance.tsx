@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Brain, 
+  IndianRupee, 
   BookOpen, 
   TrendingUp, 
   Target, 
@@ -455,7 +455,7 @@ export default function FinancialGuidance() {
               className="inline-block"
             >
               <div className="bg-gradient-primary p-4 rounded-2xl">
-                <Brain className="h-12 w-12 text-white" />
+                <IndianRupee className="h-12 w-12 text-white" />
               </div>
             </motion.div>
             <h1 className="text-4xl font-bold">
@@ -752,7 +752,7 @@ export default function FinancialGuidance() {
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <div className="bg-gradient-primary p-2 rounded-lg">
-                      <Brain className="h-5 w-5 text-white" />
+                      <IndianRupee className="h-5 w-5 text-white" />
                     </div>
                     <div>
                       <CardTitle>Personalized AI Recommendations</CardTitle>
