@@ -3,41 +3,174 @@ import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, Calendar, PieChartIcon } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Calendar, PieChartIcon, Loader2 } from "lucide-react";
+import { useExpenses } from "@/hooks/useExpenses";
+import { useIncome } from "@/hooks/useIncome";
+import { useBudgets } from "@/hooks/useBudgets";
+import { useMemo } from "react";
+import { AnalyticsMetricSkeleton, ChartSkeleton } from "@/components/SkeletonLoaders";
 
-const monthlyData = [
-  { month: "Jan", expenses: 2400, income: 4000, savings: 1600 },
-  { month: "Feb", expenses: 1398, income: 3800, savings: 2402 },
-  { month: "Mar", expenses: 3800, income: 4200, savings: 400 },
-  { month: "Apr", expenses: 3908, income: 4500, savings: 592 },
-  { month: "May", expenses: 2800, income: 4300, savings: 1500 },
-  { month: "Jun", expenses: 3200, income: 4600, savings: 1400 },
-];
-
-const categoryData = [
-  { name: "Food & Dining", value: 35, color: "#8B5CF6" },
-  { name: "Transportation", value: 20, color: "#6366F1" },
-  { name: "Shopping", value: 15, color: "#D946EF" },
-  { name: "Entertainment", value: 12, color: "#EC4899" },
-  { name: "Bills & Utilities", value: 10, color: "#F59E0B" },
-  { name: "Others", value: 8, color: "#10B981" },
-];
-
-const weeklyTrend = [
-  { day: "Mon", amount: 120 },
-  { day: "Tue", amount: 200 },
-  { day: "Wed", amount: 150 },
-  { day: "Thu", amount: 280 },
-  { day: "Fri", amount: 190 },
-  { day: "Sat", amount: 350 },
-  { day: "Sun", amount: 220 },
-];
+const CATEGORY_COLORS: Record<string, string> = {
+  food: "#8B5CF6",
+  transport: "#6366F1",
+  entertainment: "#D946EF",
+  bills: "#F59E0B",
+  shopping: "#EC4899",
+  health: "#EF4444",
+  education: "#3B82F6",
+  investment: "#10B981",
+  emi: "#F97316",
+  insurance: "#14B8A6",
+  travel: "#06B6D4",
+  groceries: "#84CC16",
+  utilities: "#EAB308",
+  personal_care: "#A855F7",
+  gifts: "#EC4899",
+  other: "#6B7280"
+};
 
 export default function Analytics() {
-  const totalExpenses = 15306;
-  const avgMonthly = 2551;
-  const highestCategory = "Food & Dining";
-  const trend = "down";
+  const { expenses, isLoading: expensesLoading, categoryBreakdown } = useExpenses();
+  const { incomes, isLoading: incomeLoading, monthlyTotal: currentMonthIncome } = useIncome();
+  const { budgets } = useBudgets();
+
+  // Calculate monthly data for last 6 months
+  const monthlyData = useMemo(() => {
+    // Always generate 6-month structure, even with no data
+    const last6Months = [];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = monthDate.toLocaleString('default', { month: 'short' });
+      
+      let monthExpenses = 0;
+      let monthIncome = 0;
+      
+      // Only calculate if data exists
+      if (expenses && expenses.length > 0) {
+        monthExpenses = expenses.filter(e => {
+          const expDate = new Date(e.date);
+          return expDate.getMonth() === monthDate.getMonth() && 
+                 expDate.getFullYear() === monthDate.getFullYear();
+        }).reduce((sum, e) => sum + e.amount, 0);
+      }
+      
+      if (incomes && incomes.length > 0) {
+        monthIncome = incomes.filter(i => {
+          const incDate = new Date(i.date);
+          return incDate.getMonth() === monthDate.getMonth() && 
+                 incDate.getFullYear() === monthDate.getFullYear();
+        }).reduce((sum, i) => sum + i.amount, 0);
+      }
+      
+      last6Months.push({
+        month: monthName,
+        expenses: monthExpenses,
+        income: monthIncome,
+        savings: monthIncome - monthExpenses
+      });
+    }
+    
+    return last6Months;
+  }, [expenses, incomes]);
+
+  // Calculate category data from actual expenses
+  const categoryData = useMemo(() => {
+    if (!categoryBreakdown) return [];
+    
+    const total = Object.values(categoryBreakdown).reduce((sum, val) => sum + val, 0);
+    if (total === 0) return [];
+    
+    return Object.entries(categoryBreakdown)
+      .map(([category, amount]) => ({
+        name: category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' '),
+        value: amount,
+        percentage: ((amount / total) * 100).toFixed(1),
+        color: CATEGORY_COLORS[category] || "#6B7280"
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8); // Top 8 categories
+  }, [categoryBreakdown]);
+
+  // Calculate weekly trend (last 7 days)
+  const weeklyTrend = useMemo(() => {
+    if (!expenses) return [];
+    
+    const last7Days = [];
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const dayDate = new Date(now);
+      dayDate.setDate(now.getDate() - i);
+      const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
+      
+      const dayExpenses = expenses.filter(e => {
+        const expDate = new Date(e.date);
+        return expDate.toDateString() === dayDate.toDateString();
+      }).reduce((sum, e) => sum + e.amount, 0);
+      
+      last7Days.push({
+        day: dayName,
+        amount: dayExpenses
+      });
+    }
+    
+    return last7Days;
+  }, [expenses]);
+
+  // Calculate metrics
+  const totalExpenses = expenses?.reduce((sum, e) => sum + e.amount, 0) || 0;
+  const avgMonthly = monthlyData.length > 0 
+    ? monthlyData.reduce((sum, m) => sum + m.expenses, 0) / monthlyData.length 
+    : 0;
+  const highestCategory = categoryData.length > 0 ? categoryData[0].name : "N/A";
+  const highestCategoryPercent = categoryData.length > 0 ? categoryData[0].percentage : 0;
+  
+  // Calculate trend (compare last 2 months)
+  const trend = monthlyData.length >= 2 
+    ? monthlyData[monthlyData.length - 1].expenses < monthlyData[monthlyData.length - 2].expenses 
+      ? "down" 
+      : "up"
+    : "neutral";
+  
+  const trendPercent = monthlyData.length >= 2
+    ? Math.abs(
+        ((monthlyData[monthlyData.length - 1].expenses - monthlyData[monthlyData.length - 2].expenses) / 
+        monthlyData[monthlyData.length - 2].expenses) * 100
+      ).toFixed(0)
+    : 0;
+
+  if (expensesLoading || incomeLoading) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <main className="container mx-auto px-4 py-8 space-y-8">
+            <div className="animate-fade-in">
+              <h1 className="text-4xl font-bold mb-2">
+                <span className="bg-gradient-primary bg-clip-text text-transparent">Analytics</span> Dashboard
+              </h1>
+              <p className="text-muted-foreground">
+                Deep insights into your spending patterns and financial health
+              </p>
+            </div>
+            
+            {/* Skeleton Key Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-scale-in">
+              <AnalyticsMetricSkeleton />
+              <AnalyticsMetricSkeleton />
+              <AnalyticsMetricSkeleton />
+              <AnalyticsMetricSkeleton />
+            </div>
+
+            {/* Skeleton Charts */}
+            <ChartSkeleton />
+          </main>
+        </div>
+      </AuthGuard>
+    );
+  }
 
   return (
     <AuthGuard>
@@ -62,8 +195,8 @@ export default function Analytics() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totalExpenses.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Last 6 months</p>
+                <div className="text-2xl font-bold">₹{totalExpenses.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">All time</p>
               </CardContent>
             </Card>
 
@@ -73,8 +206,8 @@ export default function Analytics() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${avgMonthly.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Per month</p>
+                <div className="text-2xl font-bold">₹{Math.round(avgMonthly).toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">Last 6 months avg</p>
               </CardContent>
             </Card>
 
@@ -85,7 +218,7 @@ export default function Analytics() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{highestCategory}</div>
-                <p className="text-xs text-muted-foreground">35% of total</p>
+                <p className="text-xs text-muted-foreground">{highestCategoryPercent}% of total</p>
               </CardContent>
             </Card>
 
@@ -99,7 +232,9 @@ export default function Analytics() {
                 )}
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-500">-12%</div>
+                <div className={`text-2xl font-bold ${trend === 'down' ? 'text-green-500' : 'text-red-500'}`}>
+                  {trend === 'down' ? '-' : '+'}{trendPercent}%
+                </div>
                 <p className="text-xs text-muted-foreground">vs last month</p>
               </CardContent>
             </Card>
@@ -120,18 +255,26 @@ export default function Analytics() {
                   <CardDescription>Comparison of your monthly cash flow</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="expenses" fill="#8B5CF6" name="Expenses" />
-                      <Bar dataKey="income" fill="#10B981" name="Income" />
-                      <Bar dataKey="savings" fill="#6366F1" name="Savings" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {(expenses?.length === 0 && incomes?.length === 0) ? (
+                    <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                      <DollarSign className="h-12 w-12 mb-4 opacity-50" />
+                      <p className="text-lg font-medium">No financial data yet</p>
+                      <p className="text-sm">Start by adding expenses and income to see your analytics</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={350}>
+                      <BarChart data={monthlyData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                        <Legend />
+                        <Bar dataKey="expenses" fill="#8B5CF6" name="Expenses" />
+                        <Bar dataKey="income" fill="#10B981" name="Income" />
+                        <Bar dataKey="savings" fill="#6366F1" name="Savings" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -144,25 +287,31 @@ export default function Analytics() {
                     <CardDescription>Breakdown by category</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={350}>
-                      <PieChart>
-                        <Pie
-                          data={categoryData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {categoryData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {categoryData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={350}>
+                        <PieChart>
+                          <Pie
+                            data={categoryData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ percentage }) => `${percentage}%`}
+                            outerRadius={100}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {categoryData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+                        No expense data available
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -172,23 +321,29 @@ export default function Analytics() {
                     <CardDescription>Spending by category</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {categoryData.map((category) => (
-                        <div key={category.name} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-4 h-4 rounded-full"
-                              style={{ backgroundColor: category.color }}
-                            />
-                            <span className="font-medium">{category.name}</span>
+                    {categoryData.length > 0 ? (
+                      <div className="space-y-4">
+                        {categoryData.map((category) => (
+                          <div key={category.name} className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-4 h-4 rounded-full"
+                                style={{ backgroundColor: category.color }}
+                              />
+                              <span className="font-medium">{category.name}</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="text-muted-foreground">{category.percentage}%</span>
+                              <span className="font-bold">₹{category.value.toLocaleString()}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-muted-foreground">{category.value}%</span>
-                            <span className="font-bold">${((totalExpenses * category.value) / 100).toFixed(0)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-32 text-muted-foreground">
+                        No expense data available
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -206,7 +361,7 @@ export default function Analytics() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="day" />
                       <YAxis />
-                      <Tooltip />
+                      <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
                       <Legend />
                       <Line
                         type="monotone"
@@ -214,7 +369,7 @@ export default function Analytics() {
                         stroke="#8B5CF6"
                         strokeWidth={2}
                         dot={{ fill: "#8B5CF6", r: 6 }}
-                        name="Daily Expenses ($)"
+                        name="Daily Expenses (₹)"
                       />
                     </LineChart>
                   </ResponsiveContainer>

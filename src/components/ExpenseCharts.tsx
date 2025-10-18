@@ -44,7 +44,9 @@ export const ExpenseCharts = () => {
 
   const categoryData = Object.entries(
     expenses.reduce((acc: any, expense) => {
-      acc[expense.category] = (acc[expense.category] || 0) + parseFloat(expense.amount);
+      // Capitalize first letter to match COLORS keys
+      const categoryName = expense.category.charAt(0).toUpperCase() + expense.category.slice(1);
+      acc[categoryName] = (acc[categoryName] || 0) + parseFloat(expense.amount);
       return acc;
     }, {})
   ).map(([name, value]) => ({

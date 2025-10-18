@@ -4,34 +4,88 @@ import { StreakBadge } from "@/components/StreakBadge";
 import { ExpenseForm } from "@/components/ExpenseForm";
 import { ExpenseCharts } from "@/components/ExpenseCharts";
 import { AIChatbot } from "@/components/AIChatbot";
+import { HealthScoreCard } from "@/components/HealthScoreCard";
+import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, TrendingUp, TrendingDown, Wallet, Calendar, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useExpenses } from "@/hooks/useExpenses";
+import { useIncome } from "@/hooks/useIncome";
+import { agentService } from "@/lib/ai/agent-service";
+import { mlEngine } from "@/lib/ai/ml-engine";
+import { useFinancialStore } from "@/store/useFinancialStore";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [healthScore, setHealthScore] = useState(0);
+  const [scoreBreakdown, setScoreBreakdown] = useState({ income: 0, expense: 0, savings: 0, debt: 0, liquidity: 0 });
+  const [scoreTrend, setScoreTrend] = useState<'improving' | 'stable' | 'declining'>('stable');
   const navigate = useNavigate();
+
+  const { expenses, monthlyTotal: monthlyExpenses } = useExpenses();
+  const { monthlyTotal: monthlyIncome } = useIncome();
+  const { recommendations, updateRecommendations, updateScore, updateFinancials } = useFinancialStore();
+
+  useEffect(() => {
+    updateFinancials(monthlyIncome, monthlyExpenses);
+  }, [monthlyIncome, monthlyExpenses]);
+
+  // Calculate health score and get recommendations
+  useEffect(() => {
+    const calculateHealthAndRecommendations = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Calculate cashflow health score only if user has data
+        const scoreData = mlEngine.calculateCashflowScore({
+          monthlyIncome: monthlyIncome || 0,
+          monthlyExpenses: monthlyExpenses || 0,
+          savings: Math.max(0, (monthlyIncome || 0) - (monthlyExpenses || 0)),
+          debts: 0,
+          liquidity: Math.max(0, (monthlyIncome || 0) - (monthlyExpenses || 0)) * 3
+        });
+
+        setHealthScore(scoreData.score);
+        setScoreBreakdown(scoreData.breakdown);
+        setScoreTrend(scoreData.trend);
+        updateScore(scoreData.score, scoreData.trend);
+
+        // Generate AI recommendations
+        await agentService.initialize(user.id);
+        const recs = await agentService.generateRecommendations();
+        updateRecommendations(recs);
+      } catch (error) {
+        console.log('AI features will be available once you add more data', error);
+      }
+    };
+
+    // Always calculate initial score
+    calculateHealthAndRecommendations();
+  }, [monthlyIncome, monthlyExpenses]);
 
   const handleExpenseAdded = () => {
     setRefreshKey((prev) => prev + 1);
   };
 
-  // Mock data for quick stats - in production, fetch from Supabase
   const stats = {
-    monthlyExpenses: 2450,
-    budgetUsed: 68,
-    savingsRate: 22,
-    weeklyChange: -12,
+    monthlyExpenses: monthlyExpenses || 0,
+    monthlyIncome: monthlyIncome || 0,
+    savingsRate: monthlyIncome > 0 ? Math.round(((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100) : 0,
+    budgetUsed: monthlyIncome > 0 ? Math.round((monthlyExpenses / monthlyIncome) * 100) : 0,
+    weeklyChange: 0,
   };
 
-  const recentTransactions = [
-    { id: 1, description: "Grocery Store", amount: 85.50, category: "Food", date: "Today" },
-    { id: 2, description: "Gas Station", amount: 45.00, category: "Transport", date: "Yesterday" },
-    { id: 3, description: "Netflix Subscription", amount: 15.99, category: "Entertainment", date: "2 days ago" },
-    { id: 4, description: "Restaurant", amount: 67.80, category: "Food", date: "3 days ago" },
-  ];
+  const recentTransactions = expenses?.slice(0, 4).map(e => ({
+    id: e.id,
+    description: e.description || e.category,
+    amount: e.amount,
+    category: e.category,
+    date: new Date(e.date).toLocaleDateString()
+  })) || [];
 
   return (
     <AuthGuard>
@@ -41,7 +95,7 @@ export default function Dashboard() {
         <main className="container mx-auto px-4 py-8 space-y-8">
           <div className="animate-fade-in">
             <h1 className="text-4xl font-bold mb-2">
-              Welcome to <span className="bg-gradient-primary bg-clip-text text-transparent">ExpenseMuse AI</span>
+              Welcome to <span className="bg-gradient-primary bg-clip-text text-transparent">CashFlow AI</span>
             </h1>
             <p className="text-muted-foreground">
               Track your expenses, earn streaks, and get AI-powered insights
@@ -57,19 +111,21 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">${stats.monthlyExpenses.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                  {stats.weeklyChange < 0 ? (
-                    <>
-                      <TrendingDown className="h-3 w-3 text-green-500" />
-                      <span className="text-green-500">{Math.abs(stats.weeklyChange)}% vs last week</span>
-                    </>
-                  ) : (
-                    <>
-                      <TrendingUp className="h-3 w-3 text-red-500" />
-                      <span className="text-red-500">+{stats.weeklyChange}% vs last week</span>
-                    </>
-                  )}
-                </p>
+                {stats.weeklyChange !== 0 && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                    {stats.weeklyChange < 0 ? (
+                      <>
+                        <TrendingDown className="h-3 w-3 text-green-500" />
+                        <span className="text-green-500">{Math.abs(stats.weeklyChange)}% vs last week</span>
+                      </>
+                    ) : (
+                      <>
+                        <TrendingUp className="h-3 w-3 text-red-500" />
+                        <span className="text-red-500">+{stats.weeklyChange}% vs last week</span>
+                      </>
+                    )}
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -117,6 +173,23 @@ export default function Dashboard() {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+
+          {/* AI Health Score and Recommendations */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+            <HealthScoreCard
+              score={healthScore || 0}
+              trend={scoreTrend}
+              breakdown={scoreBreakdown}
+              recommendations={mlEngine.calculateCashflowScore({
+                monthlyIncome: stats.monthlyIncome,
+                monthlyExpenses: stats.monthlyExpenses,
+                savings: Math.max(0, stats.monthlyIncome - stats.monthlyExpenses),
+                debts: 0,
+                liquidity: Math.max(0, stats.monthlyIncome - stats.monthlyExpenses) * 3
+              }).recommendations}
+            />
+            <RecommendationsPanel recommendations={recommendations} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -47,7 +47,7 @@ export const ExpenseForm = ({ onSuccess }: ExpenseFormProps) => {
       const { error } = await supabase.from("expenses").insert([{
         user_id: user.id,
         amount: parseFloat(amount),
-        category: category as any,
+        category: category.toLowerCase() as any,
         description,
         date,
       }]);

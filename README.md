@@ -1,15 +1,10 @@
- 🧩 ExpenseMuse AI – Intelligent Expense & Budget Assistant
-
-A smart expense management system that helps users track, analyze, and forecast their spending, while offering AI-driven insights and financial recommendations using the **Gemini 2.5 Flash API**.
-
-=======
-# 🧩 ExpenseMuse AI – Intelligent Expense & Budget Assistant
+# 🧩 CashFlow AI – Intelligent Expense & Budget Assistant
 
 A smart expense management system that helps users track, analyze, and forecast their spending, while offering AI-driven insights and financial recommendations using the **Gemini 2.5 Flash API**.
 
 🔗 Live Links
 
-- 🌐 Live Demo: [ExpenseMuse AI](https://expensemuseai.vercel.app/)
+- 🌐 Live Demo: [CashFlow AI](https://cashflowai.vercel.app/)
 - 📞 Call the AI Assistant: Adding very soon😊
 
 

@@ -31,20 +31,30 @@ export default function Auth() {
         toast.success("Welcome back!");
         navigate("/");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               full_name: fullName,
             },
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${window.location.origin}/dashboard`,
           },
         });
         
         if (error) throw error;
-        toast.success("Account created! Welcome to ExpenseMuse AI!");
-        navigate("/");
+        
+        // Check if email confirmation is required
+        if (data?.user?.identities?.length === 0) {
+          toast.error("This email is already registered. Please sign in instead.");
+          setIsLogin(true);
+        } else if (data?.user && !data.session) {
+          toast.success("Account created! Please check your email to confirm your account before signing in.");
+          setIsLogin(true);
+        } else {
+          toast.success("Account created! Welcome to CashFlow AI!");
+          navigate("/dashboard");
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Authentication failed");
@@ -73,7 +83,7 @@ export default function Auth() {
       <div className="w-full max-w-6xl grid md:grid-cols-2 gap-8 items-center">
         <div className="text-white space-y-6 animate-fade-in">
           <h1 className="text-5xl md:text-6xl font-bold">
-            ExpenseMuse <span className="text-primary-glow">AI</span>
+            CashFlow <span className="text-primary-glow">AI</span>
           </h1>
           <p className="text-xl text-white/90">
             Track, analyze, and master your expenses with AI-powered insights

@@ -80,7 +80,7 @@ export default function Landing() {
     {
       name: "Sarah Johnson",
       role: "Small Business Owner",
-      content: "ExpenseMuse AI helped me save over $5,000 in my first year! The AI insights are incredibly accurate.",
+      content: "CashFlow AI helped me save over $5,000 in my first year! The AI insights are incredibly accurate.",
       rating: 5,
       avatar: "SJ"
     },
@@ -124,7 +124,7 @@ export default function Landing() {
             </div>
             <div>
               <span className="text-xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-                ExpenseMuse AI
+                CashFlow AI
               </span>
               <div className="flex items-center gap-1 -mt-1">
                 <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse"></div>
@@ -528,7 +528,7 @@ export default function Landing() {
               </div>
               <div>
                 <span className="font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-                  ExpenseMuse AI
+                  CashFlow AI
                 </span>
                 <div className="flex items-center gap-1 -mt-1">
                   <div className="w-1 h-1 rounded-full bg-green-400"></div>
@@ -537,7 +537,7 @@ export default function Landing() {
               </div>
             </div>
             <p className="text-slate-500 text-sm">
-              © 2025 ExpenseMuse AI. Powered by Advanced Neural Networks.
+              © 2025 CashFlow AI. Powered by Advanced Neural Networks.
             </p>
           </div>
         </div>

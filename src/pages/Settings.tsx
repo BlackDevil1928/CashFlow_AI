@@ -8,32 +8,216 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Bell, Globe, Palette, Lock, LogOut, Mail, Save } from "lucide-react";
-import { useState } from "react";
+import { User, Bell, Globe, Palette, Lock, LogOut, Mail, Save, Download, Upload, FileText, Database } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
+import { 
+  fetchAllUserData, 
+  exportToJSON, 
+  exportExpensesToCSV, 
+  exportIncomeToCSV, 
+  exportSummaryReport,
+  importFromJSON 
+} from "@/lib/export-utils";
 
 export default function Settings() {
   const navigate = useNavigate();
-  const [fullName, setFullName] = useState("John Doe");
-  const [email, setEmail] = useState("john.doe@example.com");
-  const [currency, setCurrency] = useState("USD");
+  const { theme: systemTheme, setTheme: setSystemTheme } = useTheme();
+  const [loading, setLoading] = useState(true);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
+  const [currency, setCurrency] = useState("INR");
   const [language, setLanguage] = useState("en");
-  const [theme, setTheme] = useState("light");
   
   // Notification preferences
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [budgetAlerts, setBudgetAlerts] = useState(true);
   const [goalReminders, setGoalReminders] = useState(true);
   const [weeklyReports, setWeeklyReports] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSaveProfile = () => {
-    toast.success("Profile updated successfully!");
+  // Load user data
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        setEmail(user.email || "");
+        setFullName(user.user_metadata?.full_name || "");
+        
+        // Load preferences from user metadata
+        const metadata = user.user_metadata || {};
+        setCurrency(metadata.currency || "INR");
+        setLanguage(metadata.language || "en");
+        setEmailNotifications(metadata.email_notifications !== false);
+        setBudgetAlerts(metadata.budget_alerts !== false);
+        setGoalReminders(metadata.goal_reminders !== false);
+        setWeeklyReports(metadata.weekly_reports || false);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      toast.error('Failed to load user data');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSavePreferences = () => {
-    toast.success("Preferences saved!");
+  const handleSaveProfile = async () => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: fullName }
+      });
+
+      if (error) throw error;
+      toast.success("Profile updated successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update profile");
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          currency,
+          language,
+          email_notifications: emailNotifications,
+          budget_alerts: budgetAlerts,
+          goal_reminders: goalReminders,
+          weekly_reports: weeklyReports
+        }
+      });
+
+      if (error) throw error;
+      
+      // Also update theme
+      if (setSystemTheme) {
+        localStorage.setItem('theme-preference', systemTheme || 'system');
+      }
+      
+      toast.success("Preferences saved successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save preferences");
+    }
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`
+      });
+      
+      if (error) throw error;
+      toast.success("Password reset email sent! Check your inbox.");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send password reset email");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = confirm(
+      "Are you absolutely sure? This will permanently delete your account and all associated data. This action cannot be undone."
+    );
+    
+    if (!confirmed) return;
+
+    const doubleConfirm = confirm(
+      "Last chance! Type 'DELETE' in the prompt to confirm."
+    );
+
+    if (!doubleConfirm) return;
+
+    try {
+      // Delete user data from all tables
+      const { error: deleteError } = await supabase.rpc('delete_user_data', { user_id: userId });
+      
+      if (deleteError) {
+        console.error('Error deleting user data:', deleteError);
+      }
+
+      // Sign out
+      await supabase.auth.signOut();
+      toast.success("Account deleted successfully");
+      navigate("/");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete account");
+    }
+  };
+
+  const handleExportJSON = async () => {
+    try {
+      setExporting(true);
+      const data = await fetchAllUserData();
+      exportToJSON(data);
+      toast.success("Data exported successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to export data");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportCSV = async (type: 'expenses' | 'income') => {
+    try {
+      setExporting(true);
+      const data = await fetchAllUserData();
+      
+      if (type === 'expenses') {
+        exportExpensesToCSV(data.expenses);
+      } else {
+        exportIncomeToCSV(data.income);
+      }
+      
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} exported to CSV!`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to export data");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportSummary = async () => {
+    try {
+      setExporting(true);
+      const data = await fetchAllUserData();
+      exportSummaryReport(data);
+      toast.success("Summary report exported!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to export summary");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const result = await importFromJSON(text);
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to import data");
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleSignOut = async () => {
@@ -164,7 +348,7 @@ export default function Settings() {
 
               <div className="space-y-2">
                 <Label htmlFor="theme">Theme</Label>
-                <Select value={theme} onValueChange={setTheme}>
+                <Select value={systemTheme} onValueChange={(value: any) => setSystemTheme?.(value)}>
                   <SelectTrigger id="theme">
                     <SelectValue />
                   </SelectTrigger>
@@ -255,6 +439,89 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {/* Data Export & Backup */}
+          <Card className="shadow-elegant">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Database className="h-5 w-5" />
+                <div>
+                  <CardTitle>Data Export & Backup</CardTitle>
+                  <CardDescription>Export or import your financial data</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Export Options</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="justify-start"
+                    onClick={handleExportJSON}
+                    disabled={exporting}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export All Data (JSON)
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="justify-start"
+                    onClick={() => handleExportCSV('expenses')}
+                    disabled={exporting}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Export Expenses (CSV)
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="justify-start"
+                    onClick={() => handleExportCSV('income')}
+                    disabled={exporting}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Export Income (CSV)
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="justify-start"
+                    onClick={handleExportSummary}
+                    disabled={exporting}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Export Summary Report
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Import Data</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportData}
+                  className="hidden"
+                />
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import from JSON
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Import previously exported data. Duplicate entries will be skipped.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Security Section */}
           <Card className="shadow-elegant">
             <CardHeader>
@@ -267,14 +534,15 @@ export default function Settings() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={handleChangePassword}>
                 <Lock className="mr-2 h-4 w-4" />
                 Change Password
               </Button>
               
-              <Button variant="outline" className="w-full justify-start">
-                Enable Two-Factor Authentication
-              </Button>
+              <div className="rounded-lg border p-4 space-y-2">
+                <p className="text-sm font-medium">Account ID</p>
+                <p className="text-xs text-muted-foreground font-mono break-all">{userId}</p>
+              </div>
 
               <Separator />
 
@@ -303,7 +571,7 @@ export default function Settings() {
                     Permanently delete your account and all data
                   </p>
                 </div>
-                <Button variant="destructive">Delete Account</Button>
+                <Button variant="destructive" onClick={handleDeleteAccount}>Delete Account</Button>
               </div>
             </CardContent>
           </Card>

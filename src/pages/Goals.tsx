@@ -7,9 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Target, Trophy, Star, PlusCircle, Calendar, DollarSign } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Target, Trophy, Star, PlusCircle, Calendar, DollarSign, TrendingUp, Lightbulb } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useGoals } from "@/hooks/useGoals";
+import { GoalCardSkeleton, DashboardCardSkeleton } from "@/components/SkeletonLoaders";
 
 interface Goal {
   id: string;
@@ -46,44 +49,51 @@ const achievements: Achievement[] = [
 ];
 
 export default function Goals() {
-  const [goals, setGoals] = useState<Goal[]>(initialGoals);
+  const { activeGoals, completedGoals, loading, recommendations, addGoal, addContribution, deleteGoal, totalSaved, totalTarget, overallProgress } = useGoals();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isContribDialogOpen, setIsContribDialogOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalAmount, setNewGoalAmount] = useState("");
   const [newGoalDeadline, setNewGoalDeadline] = useState("");
+  const [contributionAmount, setContributionAmount] = useState("");
 
   const calculatePercentage = (current: number, target: number) => {
     return Math.min((current / target) * 100, 100);
   };
 
-  const handleAddGoal = () => {
+  const handleAddGoal = async () => {
     if (!newGoalTitle || !newGoalAmount || !newGoalDeadline) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    const newGoal: Goal = {
-      id: Date.now().toString(),
-      title: newGoalTitle,
-      targetAmount: parseFloat(newGoalAmount),
-      currentAmount: 0,
-      deadline: newGoalDeadline,
-      icon: "🎯",
-      color: "#6366F1",
-    };
+    await addGoal(
+      newGoalTitle,
+      parseFloat(newGoalAmount),
+      newGoalDeadline,
+      'general',
+      'medium'
+    );
 
-    setGoals([...goals, newGoal]);
     setNewGoalTitle("");
     setNewGoalAmount("");
     setNewGoalDeadline("");
     setIsDialogOpen(false);
-    toast.success("Goal created successfully!");
+  };
+
+  const handleAddContribution = async () => {
+    if (!selectedGoal || !contributionAmount) return;
+
+    await addContribution(selectedGoal, parseFloat(contributionAmount));
+    setContributionAmount("");
+    setIsContribDialogOpen(false);
+    setSelectedGoal(null);
   };
 
   const unlockedAchievements = achievements.filter(a => a.unlocked);
   const lockedAchievements = achievements.filter(a => !a.unlocked);
-  const totalSaved = goals.reduce((sum, goal) => sum + goal.currentAmount, 0);
-  const totalTarget = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
+  const goals = [...activeGoals, ...completedGoals];
 
   return (
     <AuthGuard>
@@ -152,6 +162,18 @@ export default function Goals() {
             </Dialog>
           </div>
 
+          {/* AI Recommendations */}
+          {recommendations.length > 0 && (
+            <div className="space-y-3">
+              {recommendations.map((rec, idx) => (
+                <Alert key={idx} variant={rec.type === 'at_risk' ? 'destructive' : 'default'}>
+                  <Lightbulb className="h-4 w-4" />
+                  <AlertDescription>{rec.message}</AlertDescription>
+                </Alert>
+              ))}
+            </div>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-scale-in">
             <Card className="shadow-elegant hover-lift">
@@ -160,8 +182,8 @@ export default function Goals() {
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{goals.length}</div>
-                <p className="text-xs text-muted-foreground">In progress</p>
+                <div className="text-2xl font-bold">{activeGoals.length}</div>
+                <p className="text-xs text-muted-foreground">{completedGoals.length} completed</p>
               </CardContent>
             </Card>
 
@@ -195,26 +217,45 @@ export default function Goals() {
               Savings Goals
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {goals.map((goal) => {
-                const percentage = calculatePercentage(goal.currentAmount, goal.targetAmount);
-                const remaining = goal.targetAmount - goal.currentAmount;
-                const daysRemaining = Math.ceil((new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+              {loading ? (
+                <>
+                  <GoalCardSkeleton />
+                  <GoalCardSkeleton />
+                </>
+              ) : goals.length === 0 ? (
+                <Card className="col-span-2">
+                  <CardContent className="py-12 text-center">
+                    <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground mb-4">No goals created yet</p>
+                    <Button onClick={() => setIsDialogOpen(true)} className="bg-gradient-primary">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Create Your First Goal
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : goals.map((goal) => {
+                const percentage = calculatePercentage(goal.current_amount, goal.target_amount);
+                const remaining = goal.target_amount - goal.current_amount;
+                const daysRemaining = goal.deadline ? Math.ceil((new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
 
                 return (
                   <Card key={goal.id} className="shadow-elegant hover-lift">
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                          <div className="text-4xl">{goal.icon}</div>
+                          <div className="text-4xl">🎯</div>
                           <div>
-                            <CardTitle>{goal.title}</CardTitle>
+                            <CardTitle>{goal.name}</CardTitle>
                             <CardDescription>
-                              ${goal.currentAmount.toLocaleString()} of ${goal.targetAmount.toLocaleString()}
+                              ₹{goal.current_amount.toLocaleString()} of ₹{goal.target_amount.toLocaleString()}
                             </CardDescription>
                           </div>
                         </div>
-                        {percentage >= 100 && (
+                        {goal.status === 'completed' && (
                           <Badge className="bg-green-500">Completed!</Badge>
+                        )}
+                        {goal.status === 'paused' && (
+                          <Badge variant="secondary">Paused</Badge>
                         )}
                       </div>
                     </CardHeader>
@@ -228,24 +269,48 @@ export default function Goals() {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Remaining</p>
-                          <p className="font-bold">${remaining.toLocaleString()}</p>
+                          <p className="font-bold">₹{remaining.toLocaleString()}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          {daysRemaining > 0 
-                            ? `${daysRemaining} days remaining`
-                            : "Deadline passed"}
-                        </span>
-                      </div>
-
-                      {percentage < 100 && (
-                        <Button variant="outline" className="w-full">
-                          Add Contribution
-                        </Button>
+                      {goal.deadline && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            {daysRemaining > 0 
+                              ? `${daysRemaining} days remaining`
+                              : "Deadline passed"}
+                          </span>
+                        </div>
                       )}
+
+                      <div className="flex gap-2">
+                        {percentage < 100 && goal.status === 'active' && (
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => {
+                              setSelectedGoal(goal.id);
+                              setIsContribDialogOpen(true);
+                            }}
+                          >
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            Add Contribution
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-red-500"
+                          onClick={() => {
+                            if (confirm('Delete this goal?')) {
+                              deleteGoal(goal.id);
+                            }
+                          }}
+                        >
+                          <Target className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -322,8 +387,35 @@ export default function Goals() {
               )}
             </div>
           </div>
-        </main>
-      </div>
+
+          {/* Add Contribution Dialog */}
+          <Dialog open={isContribDialogOpen} onOpenChange={setIsContribDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Contribution</DialogTitle>
+                <DialogDescription>
+                  Add money toward your goal
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contribution">Amount (₹)</Label>
+                  <Input
+                    id="contribution"
+                    type="number"
+                    placeholder="1000"
+                    value={contributionAmount}
+                    onChange={(e) => setContributionAmount(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleAddContribution} className="w-full">
+                  Add Contribution
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+      </main>
+    </div>
     </AuthGuard>
   );
 }
