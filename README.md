@@ -4,7 +4,7 @@ A smart expense management system that helps users track, analyze, and forecast 
 
 🔗 Live Links
 
-- 🌐 Live Demo: [CashFlow AI](https://cashflowai.vercel.app/)
+- 🌐 Live Demo: [CashFlow AI](https://cashflowxai.vercel.app/)
 - 📞 Call the AI Assistant: Adding very soon😊
 
 
