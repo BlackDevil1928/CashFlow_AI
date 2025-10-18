@@ -17,17 +17,65 @@ import { agentService } from "@/lib/ai/agent-service";
 import { mlEngine } from "@/lib/ai/ml-engine";
 import { useFinancialStore } from "@/store/useFinancialStore";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [healthScore, setHealthScore] = useState(0);
   const [scoreBreakdown, setScoreBreakdown] = useState({ income: 0, expense: 0, savings: 0, debt: 0, liquidity: 0 });
   const [scoreTrend, setScoreTrend] = useState<'improving' | 'stable' | 'declining'>('stable');
+  const [userName, setUserName] = useState<string>('');
+  const [hasShownWelcome, setHasShownWelcome] = useState(false);
   const navigate = useNavigate();
 
   const { expenses, monthlyTotal: monthlyExpenses } = useExpenses();
   const { monthlyTotal: monthlyIncome } = useIncome();
   const { recommendations, updateRecommendations, updateScore, updateFinancials } = useFinancialStore();
+
+  // Fetch user info and show welcome message
+  useEffect(() => {
+    const showWelcomeMessage = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || hasShownWelcome) return;
+
+        // Get user name from metadata or email
+        const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'there';
+        const firstName = fullName.split(' ')[0];
+        setUserName(firstName);
+
+        // Get current time for greeting
+        const hour = new Date().getHours();
+        let greeting = 'Good morning';
+        if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+        else if (hour >= 17) greeting = 'Good evening';
+
+        // AI welcome messages based on time of day and user data
+        const welcomeMessages = [
+          `${greeting}, ${firstName}! 🌟 Ready to take control of your finances today?`,
+          `Welcome back, ${firstName}! 💰 Let's make smart money moves together.`,
+          `${greeting}! 👋 I'm here to help you achieve your financial goals, ${firstName}.`,
+          `Hey ${firstName}! 🚀 Your financial journey continues. Let's see what we can accomplish today!`,
+        ];
+
+        const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+
+        // Show welcome toast after a short delay
+        setTimeout(() => {
+          toast.success(randomMessage, {
+            description: 'Track expenses, monitor budgets, and earn rewards as you manage your money.',
+            duration: 5000,
+          });
+        }, 500);
+
+        setHasShownWelcome(true);
+      } catch (error) {
+        console.error('Error showing welcome message:', error);
+      }
+    };
+
+    showWelcomeMessage();
+  }, [hasShownWelcome]);
 
   useEffect(() => {
     updateFinancials(monthlyIncome, monthlyExpenses);
@@ -95,7 +143,15 @@ export default function Dashboard() {
         <main className="container mx-auto px-4 py-8 space-y-8">
           <div className="animate-fade-in">
             <h1 className="text-4xl font-bold mb-2">
-              Welcome to <span className="bg-gradient-primary bg-clip-text text-transparent">CashFlow AI</span>
+              {userName ? (
+                <>
+                  Welcome back, <span className="bg-gradient-primary bg-clip-text text-transparent">{userName}</span>! 👋
+                </>
+              ) : (
+                <>
+                  Welcome to <span className="bg-gradient-primary bg-clip-text text-transparent">CashFlow AI</span>
+                </>
+              )}
             </h1>
             <p className="text-muted-foreground">
               Track your expenses, earn streaks, and get AI-powered insights
