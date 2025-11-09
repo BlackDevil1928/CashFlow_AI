@@ -140,10 +140,10 @@ Powered by Gemini 2.5 Flash:
 
 
 ## 📝 Future Enhancements
-- [ ] User authentication (Firebase/Auth0)
+- [✔️] User authentication (Firebase/Auth0)
+- [✔️] Recurring expense tracking
+- [✔️] Export to CSV/PDF
 - [ ] Multi-currency support
-- [ ] Recurring expense tracking
-- [ ] Export to CSV/PDF
 - [ ] Mobile app (React Native)
 - [ ] Shared budgets for families
 - [ ] Receipt scanning with OCR
