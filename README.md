@@ -59,7 +59,7 @@ npm run dev
 
 The app will open at `http://localhost:3000`
 
-## 📖 Usage Guide
+## 📖Usage Guide
 
 ### 1. **Dashboard**
 - View total monthly spending
