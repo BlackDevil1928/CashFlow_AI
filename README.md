@@ -25,7 +25,7 @@ A smart expense management system that helps users track, analyze, and forecast 
 - **AI**: Google Gemini 2.5 Flash API
 - **ML**: Simple linear regression for forecasting
 
-## 🚀 Quick Start
+## 🚀Quick Start
 
 ### Prerequisites
 - Node.js (v14 or higher)
