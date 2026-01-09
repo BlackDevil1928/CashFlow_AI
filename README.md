@@ -110,7 +110,7 @@ The app will open at `http://localhost:3000`
    GEMINI_API_KEY=your_actual_api_key_here
    ```
 
-## 🎨 Key Features Explained
+## 🎨Key Features Explained
 
 ### Auto-Categorization
 The system uses keyword matching to automatically categorize expenses:
