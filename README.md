@@ -139,7 +139,7 @@ Powered by Gemini 2.5 Flash:
 - 🏢 Small business owners monitoring operational costs
 
 
-## 📝 Future Enhancements
+## 📝Future Enhancements
 - [✔️] User authentication (Firebase/Auth0)
 - [✔️] Recurring expense tracking
 - [✔️] Export to CSV/PDF
