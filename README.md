@@ -148,7 +148,7 @@ Powered by Gemini 2.5 Flash:
 - [ ] Shared budgets for families
 - [ ] Receipt scanning with OCR
 
-## 📄 License
+## 📄License
 MIT License - feel free to use this project for learning and development!
 
 ## 🤝Contributing
