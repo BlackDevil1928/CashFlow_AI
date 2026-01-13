@@ -151,7 +151,7 @@ Powered by Gemini 2.5 Flash:
 ## 📄 License
 MIT License - feel free to use this project for learning and development!
 
-## 🤝 Contributing
+## 🤝Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
