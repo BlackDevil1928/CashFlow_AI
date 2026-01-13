@@ -8,7 +8,7 @@ A smart expense management system that helps users track, analyze, and forecast 
 - 📞 Call the AI Assistant: Adding very soon😊
 
 
-## 🎯 Features
+## 🎯Features
 
 ### Core Features
 - ✅ **Expense Entry & Auto-Categorization** - Add expenses with automatic category detection
